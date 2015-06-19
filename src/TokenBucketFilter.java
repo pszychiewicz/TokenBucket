@@ -5,7 +5,7 @@ import org.jnetpcap.util.PcapPacketArrayList;
 public class TokenBucketFilter {
 
     public static void main(String[] args) {
-        final String FILENAME = "soundUDP.pcap";
+        final String FILENAME = "video-sound.pcap";
         final StringBuilder errbuf = new StringBuilder();
 
         final Pcap pcap = Pcap.openOffline(FILENAME, errbuf);
@@ -18,11 +18,13 @@ public class TokenBucketFilter {
         pcap.loop(Pcap.LOOP_INFINITE, packets, null);
 
         meanThroughput(packets);
+        peakBitrate(packets);
         findMinCapacity(packets, 100000000000000l, 0, 100);
-        findMinFillRate(packets, 2000, 1000);
-        findMinFillRate(packets, 5000, 1000);
-        findMinFillRate(packets, 10000, 1000);
-        findMinFillRate(packets, 20000, 1000);
+//        findMinFillRate(packets, 1600, 1000);
+//        findMinFillRate(packets, 2000, 1000);
+//        findMinFillRate(packets, 5000, 1000);
+//        findMinFillRate(packets, 10000, 1000);
+//        findMinFillRate(packets, 20000, 1000);
         findMinFillRate(packets, 40000, 1000);
         findMinFillRate(packets, 60000, 1000);
         findMinFillRate(packets, 80000, 1000);
@@ -52,6 +54,29 @@ public class TokenBucketFilter {
         }
         long mean = sizeSum / ((endTime - startTime) / 1000);
         System.out.println("Srednia przeplywnosc [B/s] : " + mean);
+    }
+
+    private static void peakBitrate(PcapPacketArrayList packets) {
+        long lastTimestamp = -1;
+        long peak = 0;
+        long tmpSum = 0;
+        for (JPacket packet : packets) {
+            long currentTimestamp = packet.getCaptureHeader().timestampInMillis();
+            if(lastTimestamp == -1) {
+                lastTimestamp = currentTimestamp;
+                tmpSum = packet.getPacketWirelen();
+            } else if(currentTimestamp == lastTimestamp) {
+                tmpSum += packet.getPacketWirelen();
+            } else {
+                //jesli timestamp jest nowy
+                long tmpPeak = tmpSum / (currentTimestamp - lastTimestamp) * 1000;
+                if (tmpPeak > peak)
+                    peak = tmpPeak;
+                tmpSum = 0;
+                lastTimestamp = currentTimestamp;
+            }
+        }
+        System.out.println("Szczytowa szybkość [B/s] : " + peak);
     }
 
     //wazne zeby podac initailCapacity takie kotre jest za male bo inaczej nie znajdziemy najlepszego
