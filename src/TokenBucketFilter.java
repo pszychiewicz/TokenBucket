@@ -5,7 +5,7 @@ import org.jnetpcap.util.PcapPacketArrayList;
 public class TokenBucketFilter {
 
     public static void main(String[] args) {
-        final String FILENAME = "video-sound.pcap";
+        final String FILENAME = "soundUDP.pcap";
         final StringBuilder errbuf = new StringBuilder();
 
         final Pcap pcap = Pcap.openOffline(FILENAME, errbuf);
@@ -46,13 +46,15 @@ public class TokenBucketFilter {
     }
 
     private static void meanThroughput(PcapPacketArrayList packets) {
-        long startTime = packets.get(0).getCaptureHeader().timestampInMillis();
-        long endTime = packets.get(packets.size() - 1).getCaptureHeader().timestampInMillis();
+        long startTime = packets.get(0).getCaptureHeader().timestampInNanos();
+        long endTime = packets.get(packets.size() - 1).getCaptureHeader().timestampInNanos();
         long sizeSum = 0;
         for (JPacket packet : packets) {
             sizeSum += packet.getPacketWirelen();
         }
-        long mean = sizeSum / ((endTime - startTime) / 1000);
+        long deltaTime = endTime - startTime;
+        long mean = sizeSum * 1000000000l / deltaTime;
+
         System.out.println("Srednia przeplywnosc [B/s] : " + mean);
     }
 
@@ -61,7 +63,7 @@ public class TokenBucketFilter {
         long peak = 0;
         long tmpSum = 0;
         for (JPacket packet : packets) {
-            long currentTimestamp = packet.getCaptureHeader().timestampInMillis();
+            long currentTimestamp = packet.getCaptureHeader().timestampInNanos();
             if(lastTimestamp == -1) {
                 lastTimestamp = currentTimestamp;
                 tmpSum = packet.getPacketWirelen();
@@ -69,14 +71,15 @@ public class TokenBucketFilter {
                 tmpSum += packet.getPacketWirelen();
             } else {
                 //jesli timestamp jest nowy
-                long tmpPeak = tmpSum / (currentTimestamp - lastTimestamp) * 1000;
+                long deltaTime = currentTimestamp - lastTimestamp;
+                long tmpPeak = tmpSum * 1000000000l / deltaTime ;
                 if (tmpPeak > peak)
                     peak = tmpPeak;
                 tmpSum = 0;
                 lastTimestamp = currentTimestamp;
             }
         }
-        System.out.println("Szczytowa szybkość [B/s] : " + peak);
+        System.out.println("Szczytowa szybkość [B/s] : " + peak + " | " + peak/1000000l + "[MB/s]");
     }
 
     //wazne zeby podac initailCapacity takie kotre jest za male bo inaczej nie znajdziemy najlepszego

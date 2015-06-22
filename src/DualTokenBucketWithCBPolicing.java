@@ -11,12 +11,7 @@ public class DualTokenBucketWithCBPolicing implements TokenBucket{
     }
 
     public boolean consumePacket(JPacket packet) {
-        boolean result = false;
-        if(bcBucket.consumePacketWithoutRefill(packet)) {
-            result =  true;
-        } else if(beBucket.consumePacketWithoutRefill(packet)) {
-            result =  true;
-        }
+        boolean result = bcBucket.consumePacketWithoutRefill(packet) && beBucket.consumePacketWithoutRefill(packet);
         long rest = bcBucket.refill(packet.getCaptureHeader().timestampInMillis());
         beBucket.refillwithTokens(rest);
         return result;

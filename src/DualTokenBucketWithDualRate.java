@@ -10,9 +10,6 @@ public class DualTokenBucketWithDualRate implements TokenBucket{
     }
 
     public boolean consumePacket(JPacket packet) {
-        if(bcBucket.consumePacket(packet)) {
-            beBucket.refill(packet.getCaptureHeader().timestampInMillis());
-            return true;
-        } else return beBucket.consumePacket(packet);
+        return bcBucket.consumePacket(packet) && beBucket.consumePacket(packet);
     }
 }
